@@ -6,7 +6,7 @@ import ui
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
-class DesignApplication(QtWidgets.QMainWindow, ui.Ui_mainWindow):
+class DesignApplication(ui.Ui_mainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
