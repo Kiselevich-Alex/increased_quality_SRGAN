@@ -9,7 +9,7 @@ from scipy.misc import imsave
 from PyQt5 import QtCore, QtWidgets
 from PyQt5.QtGui import QImage, QPixmap
 from PyQt5.QtCore import Qt, pyqtSignal, QThread
-from PyQt5.QtWidgets import QAction, QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 checkpoint_dir = "models"
 tl.files.exists_or_mkdir(checkpoint_dir)
@@ -19,6 +19,7 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
     filename = ""
     has_lr_image = False
     has_upscale_image = False
+    model_name = ""
 
     def setupUi(self, mainWindow):
         mainWindow.setObjectName("mainWindow")
@@ -78,21 +79,27 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
         self.retranslateUi(mainWindow)
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
 
-        self.menu_open = QAction("Open File", self)
+        self.menu_open = self.menubar.addAction("Open File")
         self.menu_open.setShortcut("Ctrl+O")
         self.menu_open.triggered.connect(lambda: self.open())
 
-        self.menu_upscale = QAction("Upscale Image", self)
-        self.menu_upscale.setShortcut("Ctrl+U")
-        self.menu_upscale.triggered.connect(lambda: self.upscale())
+        self.menuUpscale = self.menubar.addMenu("Upscale Image")
 
-        self.menu_save = QAction("Save Image", self)
+        self.menu_upscale_clear = self.menuUpscale.addAction("Upscale Image without defects")
+        self.menu_upscale_clear.setShortcut("Ctrl+W")
+        self.menu_upscale_clear.triggered.connect(lambda: self.upscale("g_clear.h5"))
+
+        self.menu_upscale_doppler = self.menuUpscale.addAction("Upscale Image with Doppler effect")
+        self.menu_upscale_doppler.setShortcut("Ctrl+D")
+        self.menu_upscale_doppler.triggered.connect(lambda: self.upscale("g_doppler.h5"))
+
+        self.menu_upscale_noise = self.menuUpscale.addAction("Upscale Image with Noise")
+        self.menu_upscale_noise.setShortcut("Ctrl+E")
+        self.menu_upscale_noise.triggered.connect(lambda: self.upscale("g_noise.h5"))
+
+        self.menu_save = self.menubar.addAction("Save Image")
         self.menu_save.setShortcut("Ctrl+S")
         self.menu_save.triggered.connect(lambda: self.save())
-
-        self.menubar.addAction(self.menu_open)
-        self.menubar.addAction(self.menu_upscale)
-        self.menubar.addAction(self.menu_save)
 
     def progressBar_update(self):
         self.progressBar.setStyleSheet("QProgressBar{ "
@@ -157,12 +164,13 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
 
             QMessageBox.about(self, 'Info', "Image successfully loaded")
 
-    def upscale(self):
+    def upscale(self, model_name):
+        self.model_name = model_name
         if self.filename:
             # start process in new Thread
             self.progressBar.setValue(0)
             self.progressBar.setTextVisible(True)
-            self.menu_upscale.setDisabled(True)
+            self.menuUpscale.setDisabled(True)
             self.worker = UpscaleWorker(self.evaluate, self.filename)
             self.worker.value_changed.connect(self.on_progress_changed)
             self.worker.start()
@@ -202,7 +210,7 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
 
         # define model
         G = get_G([1, None, None, 3])
-        G.load_weights(os.path.join(checkpoint_dir, 'g.h5'))
+        G.load_weights(os.path.join(checkpoint_dir, self.model_name))
         G.eval()
 
         # rescale to ［－1, 1]
@@ -249,7 +257,7 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
 
         # update progressBar value
         self.worker.value_changed.emit(100)
-        self.menu_upscale.setDisabled(False)
+        self.menuUpscale.setDisabled(False)
         self.worker.exit()
 
 
