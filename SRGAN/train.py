@@ -100,8 +100,6 @@ def train():
     n_step_epoch = len(train_lr_img_list) / batch_size
     for epoch in range(n_epoch_init):
         for step, (lr_patchs, hr_patchs) in enumerate(train_ds):
-            tl.vis.save_images(lr_patchs.numpy(), [2, 4], os.path.join(save_dir, 'lr_{}.png'.format(step)))
-            tl.vis.save_images(hr_patchs.numpy(), [2, 4], os.path.join(save_dir, 'hr_{}.png'.format(step)))
             if lr_patchs.shape[0] != batch_size:  # if the remaining data in this epoch < batch_size
                 break
             step_time = time.time()
