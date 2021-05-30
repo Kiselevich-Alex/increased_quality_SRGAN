@@ -1,9 +1,8 @@
-
 import os
 import numpy as np
 import tensorlayer as tl
 from PIL import Image
-from model import get_G
+from model import SRGAN
 from numpy import asarray
 from scipy.misc import imsave
 from PyQt5 import QtCore, QtWidgets
@@ -79,25 +78,21 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
         self.retranslateUi(mainWindow)
         QtCore.QMetaObject.connectSlotsByName(mainWindow)
 
-        self.menu_open = self.menubar.addAction("Open File")
+        self.menu_open = self.menubar.addAction("Открыть файл")
         self.menu_open.setShortcut("Ctrl+O")
         self.menu_open.triggered.connect(lambda: self.open())
 
-        self.menuUpscale = self.menubar.addMenu("Upscale Image")
+        self.menuUpscale = self.menubar.addMenu("Обработать изображение")
 
-        self.menu_upscale_clear = self.menuUpscale.addAction("Upscale Image without defects")
-        self.menu_upscale_clear.setShortcut("Ctrl+W")
-        self.menu_upscale_clear.triggered.connect(lambda: self.upscale("g_clear.h5"))
+        self.menu_upscale_clear = self.menuUpscale.addAction("Устранить JPEG артифакты")
+        self.menu_upscale_clear.setShortcut("Ctrl+J")
+        self.menu_upscale_clear.triggered.connect(lambda: self.upscale("g_jpeg.h5"))
 
-        self.menu_upscale_doppler = self.menuUpscale.addAction("Upscale Image with Doppler effect")
-        self.menu_upscale_doppler.setShortcut("Ctrl+D")
-        self.menu_upscale_doppler.triggered.connect(lambda: self.upscale("g_doppler.h5"))
+        self.menu_upscale_doppler = self.menuUpscale.addAction("Устранить визуальные дефекты")
+        self.menu_upscale_doppler.setShortcut("Ctrl+V")
+        self.menu_upscale_doppler.triggered.connect(lambda: self.upscale("g_mix.h5"))
 
-        self.menu_upscale_noise = self.menuUpscale.addAction("Upscale Image with Noise")
-        self.menu_upscale_noise.setShortcut("Ctrl+E")
-        self.menu_upscale_noise.triggered.connect(lambda: self.upscale("g_noise.h5"))
-
-        self.menu_save = self.menubar.addAction("Save Image")
+        self.menu_save = self.menubar.addAction("Сохранить файл")
         self.menu_save.setShortcut("Ctrl+S")
         self.menu_save.triggered.connect(lambda: self.save())
 
@@ -138,7 +133,7 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
 
     def open(self):
         options = QFileDialog.Options()
-        filename, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "PNG Files (*.png)", options=options)
+        filename, _ = QFileDialog.getOpenFileName(self, "Открыть файл", "", "PNG Files (*.png)", options=options)
         if filename:
             self.filename = filename
 
@@ -162,7 +157,7 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
             self.label.setAlignment(Qt.AlignCenter)
             self.label.setPixmap(self.pixmap)
 
-            QMessageBox.about(self, 'Info', "Image successfully loaded")
+            QMessageBox.about(self, 'Info', "Файл успешно загружен")
 
     def upscale(self, model_name):
         self.model_name = model_name
@@ -175,21 +170,21 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
             self.worker.value_changed.connect(self.on_progress_changed)
             self.worker.start()
         else:
-            QMessageBox.about(self, 'Info', "You should Open Image to upscale it")
+            QMessageBox.about(self, 'Info', "Необходимо открыть файл")
 
     def save(self):
         if self.has_lr_image or self.has_upscale_image:
             options = QFileDialog.Options()
-            filename, _ = QFileDialog.getSaveFileName(self, "Save Image", "upscale image.png", "PNG Files (*.png)",
+            filename, _ = QFileDialog.getSaveFileName(self, "Сохранить файл", "upscale image.png", "PNG Files (*.png)",
                                                       options=options)
             if filename:
                 if self.has_upscale_image:
                     imsave(filename, self.upscale_image)
                 elif self.has_lr_image:
                     imsave(filename, self.lr_image)
-                QMessageBox.about(self, 'Info', "Image successfully saved")
+                QMessageBox.about(self, 'Info', "Файл успешно сохранен")
         else:
-            QMessageBox.about(self, 'Info', "You should Open Image to save it")
+            QMessageBox.about(self, 'Info', "Необходимо открыть файл")
 
     def retranslateUi(self, mainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -209,7 +204,8 @@ class Ui_mainWindow(QtWidgets.QMainWindow):
         self.worker.value_changed.emit(15)
 
         # define model
-        G = get_G([1, None, None, 3])
+        model = SRGAN()
+        G = model.get_G([1, None, None, 3])
         G.load_weights(os.path.join(checkpoint_dir, self.model_name))
         G.eval()
 
